@@ -98,8 +98,9 @@ python passive_radar_gui.py
 ---
 
 ## Next Steps (Suggestions)
-- Add heading estimation or AoA (angle of arrival)
-- Network streaming of data
-- Advanced tracking (Kalman filter, JPDA, etc.)
-- Web interface for remote viewing
-
+- Add heading estimation
+- Add 2D map plotting
+- Desktop alerts for targets of interest
+- Target highlighting (show ID on hover)
+- Advanced tracking (Kalman filter, JPDA, CFAR etc.)
+- Web API for scraping data
