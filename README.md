@@ -46,3 +46,10 @@ Install with:
 
 ```bash
 pip install -r requirements.txt
+```
+
+## Notes
+
+- Target latitude and longitude are estimated from range data; accuracy will vary.
+- The system assumes line-of-sight and flat-earth approximations for mapping.
+- This is a proof-of-concept and educational tool, not a certified radar system.
