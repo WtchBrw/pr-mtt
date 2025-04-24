@@ -1,6 +1,5 @@
-
 # Passive Radar GUI with Multi-Antenna Support, Tracking, and Real-Time Logging
-# Author: [Your Name]
+# Author: Nick Codispoti
 # Description: This script implements a passive radar using RTL-SDR with real-time GUI, plotting,
 #              range-Doppler processing, target clustering, tracking, and SQLite logging.
 
@@ -18,6 +17,10 @@ from sklearn.cluster import DBSCAN
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg as FigureCanvas
 import matplotlib.pyplot as plt
 
+from PyQt5.QtWebEngineWidgets import QWebEngineView
+import folium
+import io
+
 # Constants
 SAMPLE_RATE = 2.4e6
 CENTER_FREQ = 100.1e6
@@ -29,6 +32,14 @@ C = 3e8  # Speed of light
 FREQ = CENTER_FREQ
 WAVELENGTH = C / FREQ
 UPDATE_INTERVAL = 2000  # milliseconds
+NUM_SDR_ANTENNAS = 5
+REF_SDR_SERIAL = 1000
+
+# Set up a single reference SDR
+ref = RtlSdr(serial_number=str(REF_SDR_SERIAL))
+ref.sample_rate = SAMPLE_RATE
+ref.center_freq = CENTER_FREQ
+ref.gain = GAIN
 
 # SQLite database setup
 conn = sqlite3.connect("radar_tracks.db", check_same_thread=False)
@@ -143,6 +154,42 @@ class RadarWorker(QThread):
         self.quit()
         self.wait()
 
+# Map Tab
+class MapTab(QWidget):
+    def __init__(self, radar_lat=43.43577769387483, radar_lon=-116.2726627579046):
+        super().__init__()
+        self.radar_lat = radar_lat
+        self.radar_lon = radar_lon
+        self.target_markers = {}
+        self.layout = QVBoxLayout(self)
+        self.web_view = QWebEngineView()
+        self.layout.addWidget(self.web_view)
+        self.update_map([])
+
+    def update_map(self, targets):
+        m = folium.Map(location=[self.radar_lat, self.radar_lon], zoom_start=14, tiles='Esri.WorldImagery')
+
+        folium.Marker(
+            [self.radar_lat, self.radar_lon],
+            tooltip="Radar Location",
+            icon=folium.Icon(color='red', icon='wifi')
+        ).add_to(m)
+
+        for tid, lat, lon in targets:
+            folium.Marker(
+                [lat, lon],
+                tooltip=f"ID: {tid}\nLat: {lat:.5f}\nLon: {lon:.5f}",
+                icon=folium.Icon(color='blue', icon='info-sign')
+            ).add_to(m)
+
+        data = io.BytesIO()
+        m.save(data, close_file=False)
+        self.web_view.setHtml(data.getvalue().decode())
+        
+    def update_targets(self, target_list):
+        self.update_map(target_list)
+
+
 # GUI Class
 class PassiveRadarGUI(QMainWindow):
     def __init__(self):
@@ -160,7 +207,9 @@ class PassiveRadarGUI(QMainWindow):
         self.control_panel.addWidget(self.start_button)
 
         self.antenna_checkboxes = []
-        for i in range(4):
+
+        for i in range(NUM_SDR_ANTENNAS):
+            print(i)
             checkbox = QCheckBox(f"Antenna {i+1}")
             checkbox.setChecked(i == 0)
             self.control_panel.addWidget(checkbox)
@@ -168,9 +217,14 @@ class PassiveRadarGUI(QMainWindow):
 
         self.layout.addLayout(self.control_panel)
 
+        # THE LAT AND LONG HERE ANCHOR THE RADAR TO A MAP LOCATION
         self.tabs = QTabWidget()
+        self.map_tab = MapTab(radar_lat=43.43577769387483, radar_lon=-116.2726627579046)
+        self.tabs.addTab(self.map_tab, "Target Map")
+        self.latest_targets = []
+
         self.plots = []
-        for i in range(4):
+        for i in range(NUM_SDR_ANTENNAS):
             fig, ax = plt.subplots()
             canvas = FigureCanvas(fig)
             self.plots.append((fig, ax, canvas))
@@ -190,6 +244,8 @@ class PassiveRadarGUI(QMainWindow):
         if not self.running:
             self.running = True
             self.start_button.setText("Stop Radar")
+
+            #COMMENT THIS OUT TO CHECK GUI LAYOUT W/O SDR RUNNING
             self.start_workers()
         else:
             self.running = False
@@ -198,16 +254,17 @@ class PassiveRadarGUI(QMainWindow):
 
     def start_workers(self):
         self.workers = []
+
         for i, checkbox in enumerate(self.antenna_checkboxes):
             if checkbox.isChecked():
-                ref = RtlSdr()
-                ref.sample_rate = SAMPLE_RATE
-                ref.center_freq = CENTER_FREQ
-                ref.gain = GAIN
-                surv = RtlSdr()
+                if i == 0:
+                    continue  # Skip if this is the reference antenna (reference is always zero)
+
+                surv = RtlSdr(serial_number=str(REF_SDR_SERIAL + i))
                 surv.sample_rate = SAMPLE_RATE
                 surv.center_freq = CENTER_FREQ
                 surv.gain = GAIN
+
                 worker = RadarWorker(i, ref, surv)
                 worker.processed_data_ready.connect(self.handle_processed_data)
                 worker.start()
@@ -222,13 +279,25 @@ class PassiveRadarGUI(QMainWindow):
         fig, ax, canvas = self.plots[antenna_index]
         ax.clear()
         ax.imshow(rd_db, aspect='auto', origin='lower', extent=[0, rd_db.shape[1], 0, rd_db.shape[0]])
+
+        mapped_targets = []
         for tid, rb, vb in targets:
             ax.plot(rb, vb, 'ro')
             ax.text(rb, vb, f'ID {tid}', color='white', fontsize=8)
+
+            # Estimate lat/lon shift (rough)
+            dlat = (rb / 111320)  # meters to degrees latitude
+            dlon = (rb / (40075000 * np.cos(np.radians(self.map_tab.radar_lat)) / 360))  # meters to degrees longitude
+            mapped_targets.append((tid, self.map_tab.radar_lat + dlat, self.map_tab.radar_lon + dlon))
+
+        self.latest_targets = mapped_targets
+        self.map_tab.update_targets(mapped_targets)
+
         ax.set_title(f"Antenna {antenna_index+1} Range-Doppler")
-        ax.set_xlabel("Range (m)")
-        ax.set_ylabel("Speed (m/s)")
+        ax.set_xlabel("Range Bin")
+        ax.set_ylabel("Doppler Bin")
         canvas.draw()
+
 
     def update_gui(self):
         pass  # Placeholder for future updates
