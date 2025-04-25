@@ -1,0 +1,22 @@
+{
+    "zones" : [
+        {
+            "name": "Test Zone",
+            "center_lat": 43.43577769387483,
+            "center_lon": -116.2726627579046,
+            "radius_meters": 300
+        },
+        {
+            "name": "B.A.R.K.S.",
+            "center_lat": 43.452910388950386,
+            "center_lon": -116.15838013068442,
+            "radius_meters": 500
+        },
+        {
+            "name": "Test No-Fly",
+            "center_lat": 43.578314219262495,
+            "center_lon": -116.07234922516207,
+            "radius_meters": 1000        
+        }
+    ]
+}
