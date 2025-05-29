@@ -159,7 +159,7 @@ class RadarWorker(QThread):
 
 # Map Tab
 class MapTab(QWidget):
-    def __init__(self, radar_lat=43.43577769387483, radar_lon=-116.2726627579046):
+    def __init__(self, radar_lat=your_latitude, radar_lon=-your_longitude):
         super().__init__()
         self.radar_lat = radar_lat
         self.radar_lon = radar_lon
