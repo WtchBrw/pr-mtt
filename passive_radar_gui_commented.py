@@ -1,5 +1,5 @@
 # Passive Radar GUI with Multi-Antenna Support, Tracking, and Real-Time Logging
-# Author: [Your Name]
+# Author: NotYourFathersLore
 # Description: This script implements a passive radar using RTL-SDR with real-time GUI, plotting,
 #              range-Doppler processing, target clustering, tracking, and SQLite logging.
 
