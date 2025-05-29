@@ -1,5 +1,5 @@
 # Passive Radar GUI with Multi-Antenna Support, Tracking, and Real-Time Logging
-# Author: [Your Name]
+# Author: NotYourFathersLore
 # Description: This script implements a passive radar using RTL-SDR with real-time GUI, plotting,
 #              range-Doppler processing, target clustering, tracking, and SQLite logging.
 
@@ -156,7 +156,7 @@ class RadarWorker(QThread):
 
 # Map Tab
 class MapTab(QWidget):
-    def __init__(self, radar_lat=43.43577769387483, radar_lon=-116.2726627579046):
+    def __init__(self, radar_lat=your_latitude, radar_lon=your_longitude):
         super().__init__()
         self.radar_lat = radar_lat
         self.radar_lon = radar_lon
