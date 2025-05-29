@@ -103,3 +103,4 @@ python passive_radar_gui.py
 - Advanced tracking (Kalman filter, JPDA, etc.)
 - Web interface for remote viewing
 
+### TO REMAIN IN COMPLIANCE WITH ITAR AND ECCN, SOME LOGIC HAS BEEN EITHER LEFT OUT OR OTHERWISE BEEN MADE NON_FUNCTIONAL!!!
